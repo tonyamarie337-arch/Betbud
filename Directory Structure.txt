@@ -1,0 +1,9 @@
+SoloCashMachine/
+├── main.py
+├── bot.py
+├── requirements.txt
+├──.env
+├──.gitignore
+├── static/
+│   ├── index.html
+│   ├── profits.html

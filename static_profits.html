@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profit Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; margin: 0;}
+        .chart-container { max-width: 800px; margin: 50px auto;}
+        h1 { color: #ff4500;}
+        canvas { background: #333; border: 2px solid #ff4500;}
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <h1>Profit History</h1>
+        <canvas id="profitChart"></canvas>
+        <button onclick="window.location.href='/'">Back to Game</button>
+    </div>
+    <script>
+        async function loadChart() {
+            const response = await fetch('/profit_data');
+            const data = await response.json();
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { label: 'Crash', data: data.crash, backgroundColor: '#ff4500'},
+                        { label: 'Dice', data: data.dice, backgroundColor: '#32cd32'},
+                        { label: 'Spin', data: data.spin, backgroundColor: '#1e90ff'},
+                        { label: 'Tap', data: data.tap, backgroundColor: '#ffd700'}
+                    ]},                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Date', color: '#fff'}},
+                        y: { title: { display: true, text: 'Profit ($)', color: '#fff'}, beginAtZero: true}
+                    },
+                    plugins: { legend: { labels: { color: '#fff'}}}
+                }
+            });}        loadChart();
+    </script>
+</body>
+</html>

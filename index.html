@@ -1,166 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danny's Cash Machine</title>
+    <title>Betbud Mini App</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; text-align: center; margin: 0;}
-        .game-container { max-width: 600px; margin: 50px auto; padding: 20px;}
-        canvas { border: 2px solid #ff4500; background: #333; margin-top: 20px;}
-        button { background: #ff4500; color: #fff; padding: 10px 20px; border: none; cursor: pointer; margin: 5px; border-radius: 5px;}
-        button:hover { background: #ff6347;}
-        input, select { margin: 10px; padding: 8px; border-radius: 5px; border: none;}
-        .tap-counter { font-size: 24px; margin: 10px;}
-        h1 { color: #ff4500;}
-        p { font-size: 18px;}
-        .slot-machine { display: flex; justify-content: center; gap: 10px;}
-        .slot { width: 50px; height: 50px; border: 2px solid #ff4500; display: flex; align-items: center; justify-content: center; font-size: 24px;}
-    </style>
+        body { font-family: Arial; text-align: center; background: #1a1a1a; color: #fff; margin: 0; padding: 10px;}        .container { max-width: 400px; margin: auto;}        button { padding: 8px 16px; margin: 5px; background: #00ff00; color: #000; border: none; cursor: pointer;}        input, select { padding: 8px; margin: 5px; width: 100%; box-sizing: border-box;}        #result { font-size: 14px;}    </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1>Danny's Cash Machine</h1>
-        <p>Balance:$<span id="balance">0</span></p>
-        <select id="mode" onchange="toggleMode()">
-            <option value="crash">Crash Mode</option>
-            <option value="dice">Dice Mode</option>
-            <option value="spin">Spin Mode</option>
-            <option value="tap">Tap-to-Pay Mode</option>
-        </select>
-        <div id="crash-controls">
-            <input type="number" id="betAmountCrash" placeholder="Bet Amount ($)" min="0.1" step="0.1">
-            <input type="number" id="multiplierCrash" placeholder="Target Multiplier (e.g., 2)" min="1.1" step="0.1">
-            <button onclick="placeBet('crash')">Bet</button>
-        </div>
-        <div id="dice-controls" style="display: none;">
-            <input type="number" id="betAmountDice" placeholder="Bet Amount ($)" min="0.1" step="0.1">
-            <button onclick="placeBet('dice')">Roll Dice</button>
-        </div>
-        <div id="spin-controls" style="display: none;">
-            <input type="number" id="betAmountSpin" placeholder="Bet Amount ($)" min="0.1" step="0.1">
-            <button onclick="placeBet('spin')">Spin</button>
-        </div>
-        <div id="tap-controls" style="display: none;">
-            <p class="tap-counter">Taps: <span id="tapCount">0</span></p>
-            <button onclick="tap()">Tap!</button>
-            <button onclick="convertTaps()">Convert to Cash</button>
-        </div>
+    <div class="container">
+        <h1>Betbud Mini App</h1>
+        <input type="number" id="amount" placeholder="Deposit NGN" min="10">
         <button onclick="deposit()">Deposit</button>
-        <button onclick="withdraw()">Withdraw</button>
-        <button onclick="window.location.href='/profits'">View Profits</button>
-        <canvas id="gameCanvas" width="500" height="300"></canvas>
-        <div id="slot-machine" class="slot-machine" style="display: none;">
-            <div class="slot" id="slot1">-</div>
-            <div class="slot" id="slot2">-</div>
-            <div class="slot" id="slot3">-</div>
-        </div>
+        <select id="mode">
+            <option value="crash">Crash</option>
+            <option value="dice">Dice</option>
+            <option value="spin">Spin</option>
+            <option value="tap">Tap (Normal)</option>
+            <option value="tap_pro">Tap (Pro)</option>
+            <option value="roulette">Roulette</option>
+            <option value="plinko">Plinko</option>
+        </select>
+        <input type="number" id="bet_amount" placeholder="Bet Amount" min="10">
+        <input type="number" id="multiplier" placeholder="Multiplier" min="1.1" value="2.0">
+        <button onclick="placeBet()">Bet</button>
+        <button onclick="viewProfits()">Profits</button>
+        <p id="balance">Balance: 0 NGN</p>
+        <p id="result"></p>
     </div>
     <script>
-        const userId = 7751724771;
-        let isPlaying = false;
-        let tapCount = 0;
-        const symbols = ['🍒', '🍋', '⭐'];
-
-        async function updateBalance() {
-            const response = await fetch(`/balance?user_id=${userId}`);
-            const result = await response.json();
-            document.getElementById('balance').textContent = result.balance.toFixed(2);}
-        function toggleMode() {
-            const mode = document.getElementById('mode').value;
-            document.getElementById('crash-controls').style.display = mode === 'crash'? 'block' : 'none';
-            document.getElementById('dice-controls').style.display = mode === 'dice'? 'block' : 'none';
-            document.getElementById('spin-controls').style.display = mode === 'spin'? 'block' : 'none';
-            document.getElementById('tap-controls').style.display = mode === 'tap'? 'block' : 'none';
-            document.getElementById('slot-machine').style.display = mode === 'spin'? 'flex' : 'none';}
-        async function placeBet(mode) {
-            if (isPlaying) return;
-            isPlaying = true;
-            const betAmount = parseFloat(document.getElementById(`betAmount${mode.charAt(0).toUpperCase() + mode.slice(1)}`).value);
-            const multiplier = mode === 'crash'? parseFloat(document.getElementById('multiplierCrash').value) : (mode === 'dice'? 2 : 3);
-            if (!betAmount || (mode === 'crash' &&!multiplier)) {
-                alert("Enter valid bet amount and multiplier!");
-                isPlaying = false;
-                return;}            const response = await fetch('/bet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json'},                body: JSON.stringify({ user_id: userId, bet_amount: betAmount, multiplier, mode })
-            });
-            const result = await response.json();
-            document.getElementById('balance').textContent = result.balance.toFixed(2);
-            animateGame(result.outcome, result.crash_point, mode);}
-        function tap() {
-            if (isPlaying) return;
-            tapCount += 1;
-            document.getElementById('tapCount').textContent = tapCount;}
-        async function convertTaps() {
-            if (isPlaying || tapCount < 100) {
-                if (tapCount < 100) alert("Need 100 taps to convert!");
-                return;}            isPlaying = true;
-            const betAmount = tapCount / 100;
-            const multiplier = 1;
-            const mode = 'tap';
-            const response = await fetch('/bet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json'},                body: JSON.stringify({ user_id: userId, bet_amount: betAmount, multiplier, mode })
-            });
-            const result = await response.json();
-            document.getElementById('balance').textContent = result.balance.toFixed(2);
-            tapCount = 0;
-            document.getElementById('tapCount').textContent = tapCount;
-            animateGame(result.outcome, result.crash_point, mode);}
+        const user_id = new URLSearchParams(window.location.search).get("user_id");
         async function deposit() {
-            const amount = parseFloat(prompt("Enter deposit amount ($):"));
-            if (!amount || amount <= 0) {
-                alert("Enter a valid amount!");
-                return;}            const response = await fetch('/deposit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json'},                body: JSON.stringify({ user_id: userId, amount })
+            const amount = document.getElementById("amount").value;
+            const handler = PaystackPop.setup({
+                key:"{{ PAYSTACK_PUBLIC_KEY }}",
+                email:`user${user_id}@betbud.com`,
+                amount: amount* 100,
+                metadata: { user_id},                onClose: () => Telegram.WebApp.showAlert("Deposit cancelled"),
+                callback: async (response) => {
+                    Telegram.WebApp.showAlert("Deposit successful!");
+                    updateBalance();}            });
+            handler.openIframe();}        async function placeBet() {
+            const mode = document.getElementById("mode").value;
+            const bet_amount = document.getElementById("bet_amount").value;
+            const multiplier = document.getElementById("multiplier").value;
+            const response = await fetch(`/bet/${mode.split('_')[0]}`, {
+                method:"POST",
+                headers: {"Content-Type":"application/json" },
+                body: JSON.stringify({ user_id, bet_amount, multiplier })
             });
-            const result = await response.json();
-            document.getElementById('balance').textContent = result.balance.toFixed(2);
-            window.open(result.paystack_url, '_blank');}
-        async function withdraw() {
-            const amount = parseFloat(prompt("Enter withdrawal amount ($):"));
-            if (!amount || amount <= 0) {
-                alert("Enter a valid amount!");
-                return;}            const response = await fetch('/withdraw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json'},                body: JSON.stringify({ user_id: userId, amount })
-            });
-            const result = await response.json();
-            document.getElementById('balance').textContent = result.balance.toFixed(2);
-            alert(`Withdrawn $${amount}! Check your bank/Mozartbet.`);}
-        function animateGame(outcome, crashPoint, mode) {
-            let multiplier = 1;
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
-            const interval = setInterval(() => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ff4500';
-                ctx.font = '30px Arial';
-                if (mode === 'crash') {
-                    ctx.fillText(`Multiplier:${multiplier.toFixed(2)}x`, 50, 50);
-                    multiplier += 0.05;
-                    if (multiplier >= crashPoint) {
-                        clearInterval(interval);
-                        ctx.fillText(outcome === 'win'? 'WIN!' : 'CRASH!', 50, 100);
-                        isPlaying = false;}                } else if (mode === 'dice') {
-                    ctx.fillText(`Roll:${crashPoint}`, 50, 50);
-                    ctx.fillText(outcome === 'win'? 'WIN!' : 'LOSE!', 50, 100);
-                    clearInterval(interval);
-                    isPlaying = false;} else if (mode === 'spin') {
-                    const slots = [Math.floor(crashPoint), Math.floor(crashPoint), Math.floor(crashPoint)];
-                    if (outcome === 'lose') {
-                        slots[2] = (slots[2] % 3) + 1;}                    document.getElementById('slot1').textContent = symbols[slots[0] - 1];
-                    document.getElementById('slot2').textContent = symbols[slots[1] - 1];
-                    document.getElementById('slot3').textContent = symbols[slots[2] - 1];
-                    ctx.fillText(outcome === 'win'? 'JACKPOT!' : 'NO MATCH!', 50, 50);
-                    clearInterval(interval);
-                    isPlaying = false;} else {
-                    ctx.fillText(`Taps Converted! Profit: $${(tapCount / 100* 0.9).toFixed(2)}`, 50, 50);
-                    clearInterval(interval);
-                    isPlaying = false;}            }, 50);}
-        updateBalance();
+            const data = await response.json();
+            document.getElementById("result").innerText =`Bet${bet_amount} NGN:${data.win?"Won" :"Lost"}! Profit:${data.profit.toFixed(2)} NGN`;
+            Telegram.WebApp.showAlert(`Bet${data.win?"Won" :"Lost"}! Profit:${data.profit.toFixed(2)} NGN`);
+            updateBalance();}        async function updateBalance() {
+            const response = await fetch(`/balance/${user_id}`);
+            const data = await response.json();
+            document.getElementById("balance").innerText =`Balance:${data.balance.toFixed(2)} NGN`;}        async function viewProfits() {
+            Telegram.WebApp.openLink("https://betbud.onrender.com/profits");}        updateBalance();
+        Telegram.WebApp.ready();
     </script>
 </body>
 </html>

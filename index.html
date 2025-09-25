@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Betbud Mini App</title>
+    <title>Betbud - Your Solo Betting Empire</title>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: Arial; text-align: center; background: #1a1a1a; color: #fff; margin: 0; padding: 10px;}        .container { max-width: 400px; margin: auto;}        button { padding: 8px 16px; margin: 5px; background: #00ff00; color: #000; border: none; cursor: pointer;}        input, select { padding: 8px; margin: 5px; width: 100%; box-sizing: border-box;}        #result { font-size: 14px;}    </style>
+        body { font-family: Arial; text-align: center; background: #1a1a1a; color: #fff;}        .container { max-width: 600px; margin: auto; padding: 20px;}        button { padding: 10px 20px; margin: 10px; background: #00ff00; color: #000; border: none; cursor: pointer;}        input, select { padding: 10px; margin: 5px;}    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Betbud Mini App</h1>
+        <h1>Betbud: Rule the Games</h1>
         <input type="number" id="amount" placeholder="Deposit NGN" min="10">
         <button onclick="deposit()">Deposit</button>
         <select id="mode">
@@ -25,21 +24,22 @@
         <input type="number" id="bet_amount" placeholder="Bet Amount" min="10">
         <input type="number" id="multiplier" placeholder="Multiplier" min="1.1" value="2.0">
         <button onclick="placeBet()">Bet</button>
-        <button onclick="viewProfits()">Profits</button>
+        <button onclick="window.location.href='/profits'">View Profits</button>
+        <button onclick="withdraw()">Withdraw</button>
         <p id="balance">Balance: 0 NGN</p>
         <p id="result"></p>
     </div>
     <script>
-        const user_id = new URLSearchParams(window.location.search).get("user_id");
         async function deposit() {
             const amount = document.getElementById("amount").value;
             const handler = PaystackPop.setup({
                 key:"{{ PAYSTACK_PUBLIC_KEY }}",
-                email:`user${user_id}@betbud.com`,
+                email:"user7751724771@betbud.com",
                 amount: amount* 100,
-                metadata: { user_id},                onClose: () => Telegram.WebApp.showAlert("Deposit cancelled"),
+                metadata: { user_id:"7751724771" },
+                onClose: () => alert("Deposit cancelled"),
                 callback: async (response) => {
-                    Telegram.WebApp.showAlert("Deposit successful!");
+                    alert("Deposit successful!");
                     updateBalance();}            });
             handler.openIframe();}        async function placeBet() {
             const mode = document.getElementById("mode").value;
@@ -48,17 +48,18 @@
             const response = await fetch(`/bet/${mode.split('_')[0]}`, {
                 method:"POST",
                 headers: {"Content-Type":"application/json" },
-                body: JSON.stringify({ user_id, bet_amount, multiplier })
+                body: JSON.stringify({ user_id: 7751724771, bet_amount, multiplier })
             });
             const data = await response.json();
             document.getElementById("result").innerText =`Bet${bet_amount} NGN:${data.win?"Won" :"Lost"}! Profit:${data.profit.toFixed(2)} NGN`;
-            Telegram.WebApp.showAlert(`Bet${data.win?"Won" :"Lost"}! Profit:${data.profit.toFixed(2)} NGN`);
-            updateBalance();}        async function updateBalance() {
-            const response = await fetch(`/balance/${user_id}`);
+            updateBalance();}        async function withdraw() {
+            const amount = prompt("Enter amount to withdraw (NGN):");
+            if (amount) {
+                alert(`Withdrawal of${amount} NGN initiated via Paystack to your bank/Mozartbet.`);}        }
+        async function updateBalance() {
+            const response = await fetch("/balance/7751724771");
             const data = await response.json();
-            document.getElementById("balance").innerText =`Balance:${data.balance.toFixed(2)} NGN`;}        async function viewProfits() {
-            Telegram.WebApp.openLink("https://betbud.onrender.com/profits");}        updateBalance();
-        Telegram.WebApp.ready();
+            document.getElementById("balance").innerText =`Balance:${data.balance.toFixed(2)} NGN`;}        updateBalance();
     </script>
 </body>
 </html>

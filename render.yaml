@@ -1,1 +1,34 @@
-
+services:
+  - type: web
+    name: Betbud
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    repo: https://github.com/tonyamarie337-arch/Betbud
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py & python bot.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PAYSTACK_SECRET_KEY
+        value: sk_live_e5e0049497fa9dd300cc4fcf596755829df12033
+      - key: PAYSTACK_PUBLIC_KEY
+        value: pk_live_4fee19d4c477f492c720e56cb6cd5bb0ad34d0e7
+      - key: TELEGRAM_BOT_TOKEN
+        value: 8187780768:AAFrHJM5gBirINaj1BiPjf0y-wQZrrOklxE
+      - key: ADMIN_USER_ID
+        value: 7751724771
+      - key: HOUSE_EDGE
+        value: 0.1
+      - key: CRASH_WIN_RATE
+        value: 0.8
+      - key: DICE_WIN_RATE
+        value: 0.66
+      - key: SPIN_WIN_RATE
+        value: 0.5
+      - key: TAP_PAYOUT_RATE
+        value: 0.9
+    disks:
+      - name: data
+        mountPath: /mnt/data
+        sizeGB: 1
